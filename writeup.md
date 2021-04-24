@@ -38,26 +38,26 @@ You're reading it!
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in line 29 to 80 in `my-work.py`.
+The code for this step is contained in line #29 to #80 in `my-work.py`.
 
 I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
 I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
 
-![a undistored image example][calibration2_calibrated.jpg]
+![a undistored image example](./calibration2_calibrated.jpg)
 
 ### Pipeline (single images)
 
 #### 1. Provide an example of a distortion-corrected image.
 
 To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![a undistored image example][calibration2_calibrated.jpg]
+![a undistored image example](./writeup_imgs/undistorted.jpg)
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 90 through 170 in `my-work.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines #90 through #170 in `my-work.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
 
-![thresholded.jpg][thresholded.jpg]
+![thresholded.jpg](./thresholded.jpg)
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
@@ -80,7 +80,7 @@ dst_ords = np.float32([
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![birdeye.jpg][birdeye.jpg]
+![birdeye.jpg](./writeup_imgs/bird.jpg)
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
@@ -89,17 +89,18 @@ My algorithm is basically:
 2. split in y axis to 9 windows, from bottom to top. and iterate on the windows, to find all non-zero pixels falling in the windows. 
 3. fit 2 2-degree polynomial on those pixels using np.polyfit.
 
-![pixels_found.jpg][pixels_found.jpg]
+![pixels_found.jpg](./writeup_imgs/outimg.jpg)
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines 334 through 339 in my code in `my-work.py`
+for radius, I did this in lines #338 through #341 in my code in `my-work.py`
+for distance to center, I implemented in lnes #370 through #378.
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
 I implemented this step in lines #394 through #405 in my code in `my-work.py` in the function `process_image()`.  Here is an example of my result on a test image:
 
-![final.jpg][final.jpg]
+![final.jpg](./writeup_imgs/final.jpg)
 
 ---
 
@@ -117,3 +118,5 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 One problem of the program is that it's still not robust. it works better on almost straight lains, but worse on curved lanes, noisy images, etc.
 I think basically the program is rule-based, and rules are not good at generalization.
+
+

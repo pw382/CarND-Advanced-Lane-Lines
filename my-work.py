@@ -17,7 +17,7 @@
 # ---
 # ## First, I'll compute the camera calibration using chessboard images
 
-# In[280]:
+# In[1]:
 
 
 import numpy as np
@@ -65,7 +65,7 @@ def calibrate():
 mtx, dist = calibrate()
 
 
-# In[501]:
+# In[2]:
 
 
 # Test undistortion on an image
@@ -84,7 +84,7 @@ cv2.imwrite("calibration2_calibrated.jpg", dst)
 # ## Use color transforms, gradients, etc., to create a thresholded binary image.
 # 
 
-# In[502]:
+# In[3]:
 
 
 def abs_sobel_thresh(gray, orient='x', thres=(0,255)):
@@ -168,13 +168,13 @@ def binary_grads(img, debug=False):
     return mag["combined"]
 
 
-# In[503]:
+# In[4]:
 
 
 ## Apply a perspective transform to rectify binary image ("birds-eye view").
 
 
-# In[506]:
+# In[5]:
 
 
 src_ords = np.float32([
@@ -183,11 +183,13 @@ src_ords = np.float32([
     [685,450],
     [595,450],
 ])
+
+ha = 0
 dst_ords = np.float32([
-    [310, 710+ha],
-    [950,710+ha],
-    [950,ha],
-    [310,ha],
+    [310, 710],
+    [950,710],
+    [950,0],
+    [310,0],
 ])
 
 def get_bird_eye(img):
@@ -217,13 +219,13 @@ normal = bird2normal(birdeye)
 axes[2].imshow(normal, cmap='gray')
 
 
-# In[507]:
+# In[6]:
 
 
 ## Detect lane pixels and fit to find the lane boundary.
 
 
-# In[510]:
+# In[7]:
 
 
 f, (ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(20,10))
@@ -360,7 +362,7 @@ ax3.imshow(lane_img)
 cv2.imwrite("pixels_found.jpg",out_img)
 
 
-# In[490]:
+# In[8]:
 
 
 ## Determine the curvature of the lane and vehicle position with respect to center.
@@ -371,11 +373,10 @@ def distance2center(bird):
     midpoint = np.int(histogram.shape[0]//2)
     leftx_base = np.argmax(histogram[:midpoint])
     rightx_base = np.argmax(histogram[midpoint:]) + midpoint
-    print(leftx_base,midpoint,rightx_base)
     return (rightx_base + leftx_base)/2 - midpoint
 
 
-# In[511]:
+# In[16]:
 
 
 ## Warp the detected lane boundaries back onto the original image.
@@ -384,14 +385,13 @@ def distance2center(bird):
 def weighted_img(img, initial_img, α=0.8, β=1., γ=0.):
     return cv2.addWeighted(initial_img, α, img, β, γ)
 
-def process_image(img):
-    #rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    dst = cv2.undistort(rgb, mtx, dist, None, mtx)
+def process_image_2(img):
+    dst = cv2.undistort(img, mtx, dist, None, mtx)
 
     bm = binary_grads(dst)
 
     bird = get_bird_eye(bm)
-    bird_img,lane_img,left_curverad,right_curverad,left_fit,right_fit = fit_polynomial(bird)
+    out_img,lane_img,left_curverad,right_curverad,left_fit,right_fit = fit_polynomial(bird)
     lane_ahead = bird2normal(lane_img)
     center_distance = distance2center(bird) * 3.7 / 700
 
@@ -407,19 +407,31 @@ def process_image(img):
         cv2.putText(final,t, (10, height), font, 1.0, (255,255,255),2,cv2.LINE_AA)
         height += 40
 
-    return final
+    return final, lane_ahead, lane_img, out_img, bird, bm, dst
+
+def process_image(img):
+    return process_image_2(img)[0]
 
 import matplotlib.image as mpimg
-img = mpimg.imread('test_images/straight_lines2.jpg')
-final = process_image(img)
+def BGR2RGB(img): return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+def test(file, axes):
+    img = mpimg.imread(file)
+    final, lane_ahead, lane_img, out_img, bird, bm, dst = process_image_2(img)
+    i = 0
+    axes[i].imshow(img); axes[i].set_title("original");i+=1;cv2.imwrite("writeup_imgs/original.jpg",BGR2RGB(img))
+    axes[i].imshow(dst); axes[i].set_title("undistorted");i+=1;cv2.imwrite("writeup_imgs/undistorted.jpg",BGR2RGB(dst))
+    axes[i].imshow(bm); axes[i].set_title("thresholded");i+=1;cv2.imwrite("writeup_imgs/thresholded.jpg",bm*255)
+    axes[i].imshow(bird); axes[i].set_title("bird");i+=1;cv2.imwrite("writeup_imgs/bird.jpg",bird*255)
+    axes[i].imshow(out_img); axes[i].set_title("outimg");i+=1;cv2.imwrite("writeup_imgs/outimg.jpg",out_img*255)
+    axes[i].imshow(lane_img); axes[i].set_title("lane");i+=1;cv2.imwrite("writeup_imgs/lane.jpg",lane_img)
+    axes[i].imshow(final); axes[i].set_title("final");i+=1;cv2.imwrite("writeup_imgs/final.jpg",final)
 
-f, (ax1,ax2,) = plt.subplots(1, 2, figsize=(20,10))
-ax1.imshow(img)
-ax2.imshow(final)
-cv2.imwrite("final.jpg", final)
+f, axes = plt.subplots(7, 1, figsize=(20,30))
+#test("test_images/straight_lines1.jpg", axes[0])
+test("test_images/test1.jpg", axes)
 
 
-# In[493]:
+# In[10]:
 
 
 import os
@@ -435,32 +447,26 @@ for f in os.listdir("test_images/"):
     cv2.imwrite('test_images_output/'+f, new)
 
 
-# In[494]:
+# In[13]:
 
 
 # Import everything needed to edit/save/watch video clips
 from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
-white_output = 'project_video_output.mp4'
-## To speed up the testing process you may want to try your pipeline on a shorter subclip of the video
-## To do so add .subclip(start_second,end_second) to the end of the line below
-## Where start_second and end_second are integer values representing the start and end of the subclip
-## You may also uncomment the following line for a subclip of the first 5 seconds
-##clip1 = VideoFileClip("test_videos/solidWhiteRight.mp4").subclip(0,5)
-clip1 = VideoFileClip("project_video.mp4").subclip(0,1)
+clip1 = VideoFileClip("project_video.mp4", )
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
-get_ipython().run_line_magic('time', 'white_clip.write_videofile(white_output, audio=False)')
+get_ipython().run_line_magic('time', 'white_clip.write_videofile("project_video_output.mp4", audio=False, )')
 
 
-# In[495]:
+# In[14]:
 
 
 HTML("""
 <video width="960" height="540" controls>
   <source src="{0}">
 </video>
-""".format(white_output))
+""".format("project_video_output.mp4"))
 
 
 # In[ ]:
