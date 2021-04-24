@@ -96,6 +96,8 @@ My algorithm is basically:
 for radius, I did this in lines #338 through #341 in my code in `my-work.py`
 for distance to center, I implemented in lnes #370 through #378.
 
+I also added a simple sanity check that if distance to lane center is more than 0.4 meters, I'll drop lane result of this frame and use a last valid one.
+
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
 I implemented this step in lines #394 through #405 in my code in `my-work.py` in the function `process_image()`.  Here is an example of my result on a test image:

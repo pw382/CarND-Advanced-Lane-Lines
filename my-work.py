@@ -17,7 +17,7 @@
 # ---
 # ## First, I'll compute the camera calibration using chessboard images
 
-# In[1]:
+# In[21]:
 
 
 import numpy as np
@@ -65,7 +65,7 @@ def calibrate():
 mtx, dist = calibrate()
 
 
-# In[2]:
+# In[22]:
 
 
 # Test undistortion on an image
@@ -84,7 +84,7 @@ cv2.imwrite("calibration2_calibrated.jpg", dst)
 # ## Use color transforms, gradients, etc., to create a thresholded binary image.
 # 
 
-# In[3]:
+# In[23]:
 
 
 def abs_sobel_thresh(gray, orient='x', thres=(0,255)):
@@ -168,13 +168,13 @@ def binary_grads(img, debug=False):
     return mag["combined"]
 
 
-# In[4]:
+# In[24]:
 
 
 ## Apply a perspective transform to rectify binary image ("birds-eye view").
 
 
-# In[5]:
+# In[25]:
 
 
 src_ords = np.float32([
@@ -219,13 +219,13 @@ normal = bird2normal(birdeye)
 axes[2].imshow(normal, cmap='gray')
 
 
-# In[6]:
+# In[26]:
 
 
 ## Detect lane pixels and fit to find the lane boundary.
 
 
-# In[7]:
+# In[27]:
 
 
 f, (ax1,ax2,ax3) = plt.subplots(1, 3, figsize=(20,10))
@@ -362,7 +362,7 @@ ax3.imshow(lane_img)
 cv2.imwrite("pixels_found.jpg",out_img)
 
 
-# In[8]:
+# In[28]:
 
 
 ## Determine the curvature of the lane and vehicle position with respect to center.
@@ -370,13 +370,13 @@ cv2.imwrite("pixels_found.jpg",out_img)
 def distance2center(bird):
     histogram = np.sum(bird[bird.shape[0]//2:,:], axis=0)
 
-    midpoint = np.int(histogram.shape[0]//2)
+    midpoint = np.int32(histogram.shape[0]//2)
     leftx_base = np.argmax(histogram[:midpoint])
     rightx_base = np.argmax(histogram[midpoint:]) + midpoint
     return (rightx_base + leftx_base)/2 - midpoint
 
 
-# In[16]:
+# In[59]:
 
 
 ## Warp the detected lane boundaries back onto the original image.
@@ -385,6 +385,7 @@ def distance2center(bird):
 def weighted_img(img, initial_img, α=0.8, β=1., γ=0.):
     return cv2.addWeighted(initial_img, α, img, β, γ)
 
+last_lane_and_text = None
 def process_image_2(img):
     dst = cv2.undistort(img, mtx, dist, None, mtx)
 
@@ -393,30 +394,40 @@ def process_image_2(img):
     bird = get_bird_eye(bm)
     out_img,lane_img,left_curverad,right_curverad,left_fit,right_fit = fit_polynomial(bird)
     lane_ahead = bird2normal(lane_img)
-    center_distance = distance2center(bird) * 3.7 / 700
-
-    final = np.int32(img + lane_ahead*0.2)
+    center_dt = distance2center(bird) * 3.7 / 700
     texts = [
-        f"distance to center of lane: %.2fm" % center_distance,
+        f"distance to center of lane: %.2fm" % center_dt,
         f"left curve: {int(left_curverad)}",
         f"right curve: {int(right_curverad)}",
     ]
+
+    distance_to_center_max = 0.4
+    global last_lane_and_text
+    if abs(center_dt) < distance_to_center_max: 
+        final = np.int32(img + lane_ahead*0.2)
+        last_lane_and_text = lane_ahead,texts
+    elif last_lane_and_text is not None:
+        lane,texts = last_lane_and_text
+        final = np.int32(img + lane*0.2)
+    else:
+        final = img
+
     font = cv2.FONT_HERSHEY_SIMPLEX
     height = 30
     for t in texts:
         cv2.putText(final,t, (10, height), font, 1.0, (255,255,255),2,cv2.LINE_AA)
         height += 40
 
-    return final, lane_ahead, lane_img, out_img, bird, bm, dst
+    return final, center_dt, lane_ahead, lane_img, out_img, bird, bm, dst
 
 def process_image(img):
     return process_image_2(img)[0]
-
+        
 import matplotlib.image as mpimg
 def BGR2RGB(img): return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 def test(file, axes):
     img = mpimg.imread(file)
-    final, lane_ahead, lane_img, out_img, bird, bm, dst = process_image_2(img)
+    final, center_dt, lane_ahead, lane_img, out_img, bird, bm, dst = process_image_2(img)
     i = 0
     axes[i].imshow(img); axes[i].set_title("original");i+=1;cv2.imwrite("writeup_imgs/original.jpg",BGR2RGB(img))
     axes[i].imshow(dst); axes[i].set_title("undistorted");i+=1;cv2.imwrite("writeup_imgs/undistorted.jpg",BGR2RGB(dst))
@@ -431,7 +442,7 @@ f, axes = plt.subplots(7, 1, figsize=(20,30))
 test("test_images/test1.jpg", axes)
 
 
-# In[10]:
+# In[60]:
 
 
 import os
@@ -447,7 +458,7 @@ for f in os.listdir("test_images/"):
     cv2.imwrite('test_images_output/'+f, new)
 
 
-# In[13]:
+# In[63]:
 
 
 # Import everything needed to edit/save/watch video clips
@@ -459,7 +470,7 @@ white_clip = clip1.fl_image(process_image) #NOTE: this function expects color im
 get_ipython().run_line_magic('time', 'white_clip.write_videofile("project_video_output.mp4", audio=False, )')
 
 
-# In[14]:
+# In[64]:
 
 
 HTML("""
